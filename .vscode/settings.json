@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "lib_tcps_openssl.h": "c",
+        "unistd.h": "c",
+        "city.h": "c",
+        "tk_log.h": "c",
+        "vd1050.h": "c",
+        "tk_public.h": "c",
+        "time.h": "c",
+        "string": "cpp",
+        "funtool.h": "c"
+    }
+}
