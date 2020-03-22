@@ -12,14 +12,14 @@ dir=$(notdir $(SRCS))
 # .c to .o
 OBJS = $(patsubst %.c, obj/%.o, $(patsubst %.cpp, obj/%.o,$(dir)) )
 
-TARGET = main
+TARGET = tcps_sm
 
 all: $(TARGET)
 	@echo $(SRCS)
 	@echo $(dir)
 	@echo $(OBJS)
 
-main : obj/main.o $(filter-out obj/main.o, $(OBJS))
+$(TARGET) : obj/main.o $(filter-out obj/main.o, $(OBJS))
 	$(CXX) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
 obj/%.o : src/%.c

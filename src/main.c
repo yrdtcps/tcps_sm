@@ -6,86 +6,13 @@
 #include "LIB_TCPS_OPENSSL.h"
 #include "funtool.h"
 
-#define T_SM2_SIGN 1 //国密签名
-#define T_SM2_VERIFY 2 //国密验签
-#define T_SM2_ENC 3 //国密加密
-#define T_SM2_DEC 4 //国密解密
-#define TARGE_  T_SM2_ENC
+// #define T_SM2_SIGN 1 //国密签名
+// #define T_SM2_VERIFY 2 //国密验签
+// #define T_SM2_ENC 3 //国密加密
+// #define T_SM2_DEC 4 //国密解密
+// #define TARGE_  T_SM2_ENC
 
-#if TARGE_ == T_SM2_VERIFY
-int main(int argc, char* argv[])
-{
-	unsigned char pubkey[65] = {0};
-	unsigned char signature[64] = {0};
-	unsigned char data[2048] = {0};
-	int datalen = 0;
-	char* sPubKey = NULL;
-	char* sSignature = NULL;
-	char* sData = NULL;
-
-	int itmp;
-	int ret;
-	unsigned char user_id[] = {"1234567812345678"};
-	unsigned int user_id_len = (unsigned int)(strlen((char *)user_id));
-
-	int opt;
-
-	opterr = 0;  //使getopt不行stderr输出错误信息
-
-	while( (opt = getopt(argc, argv, "k:s:d:")) != -1 )
-	{
-		printf("%c=%s\n", opt, optarg);
-		switch (opt)
-		{
-		case 'k': //pubkey
-			sPubKey = optarg;
-			if(strlen(sPubKey) != 130 || memcmp(sPubKey, "04", 2))
-			{
-				fprintf(stderr, "pubkey len must be 65 bytes and begin with 04!\n");
-				exit(2);
-			}
-			hexstr2buf(sPubKey, pubkey, &itmp);
-			break;
-		case 's': //signature
-			sSignature = optarg;
-			if(strlen(sSignature) != 128)
-			{
-				fprintf(stderr, "signature len must be 64 bytes!\n");
-				exit(3);
-			}
-			hexstr2buf(sSignature, signature, &itmp);
-			break;
-		case 'd': //data
-			sData = optarg;
-			if(strlen(sSignature) < 2)
-			{
-				fprintf(stderr, "data len must be more than 1 byte!\n");
-				exit(4);
-			}
-			hexstr2buf(sData, data, &datalen);
-			break;
-		default: /* '?' */
-			fprintf(stderr, "Usage: %s -k pubkey -s signature -d data\n", argv[0]);
-			exit(1);
-		}
-	}
-
-	if(!sPubKey || !sSignature || !sData)
-	{
-		fprintf(stderr, "Usage: %s -k pubkey -s signature -d data\n", argv[0]);
-		exit(5);
-	}
-	// ret = sm2_verify_sig(data, datalen, user_id, user_id_len, pubkey, (SM2_SIGNATURE_STRUCT*)signature);
-	// if (ret)
-	// {
-	// 	printf("Verify SM2 signature failed!\n");
-	// 	return 6;
-	// }
-	printf("Verify SM2 signature succeeded!\n");
-	return 0;
-}
-
-#else
+// #if TARGE_ == T_SM2_VERIFY
 
 
 /*************************************************
@@ -141,6 +68,149 @@ void SET_SIGN_DATA(const unsigned char *sign,unsigned int sign_len,unsigned char
 	SIGN[1]=i-2;
 	*SIGN_len=i;
 }
+
+
+#if 1
+int main(int argc, char* argv[])
+{
+	unsigned char pubkey[64] = {0};
+	unsigned char signature[64] = {0};
+	unsigned char data[4096] = {0};
+	int datalen = 0;
+	char* sPubKey = NULL;
+	char* sSignature = NULL;
+	char* sData = NULL;
+
+	int itmp;
+	int ret;
+	// unsigned char user_id[] = {"1234567812345678"};
+	// unsigned int user_id_len = (unsigned int)(strlen((char *)user_id));
+
+	int opt;
+
+	opterr = 0;  //使getopt不行stderr输出错误信息
+
+	while( (opt = getopt(argc, argv, "k:s:d:")) != -1 )
+	{
+		printf("%c=%s\n", opt, optarg);
+		switch (opt)
+		{
+		case 'k': //pubkey
+			sPubKey = optarg;
+			if(strlen(sPubKey) == 130)
+			{
+				if(memcmp(sPubKey, "04", 2))
+				{
+					fprintf(stderr, "pubkey must begin with 04 when len is 65 bytes!\n");
+					exit(2);
+				}
+				HexStr2Buf(sPubKey + 2, pubkey);
+			}
+			else if(strlen(sPubKey) == 128)
+			{
+				HexStr2Buf(sPubKey, pubkey);
+			}
+			else if(strlen(sPubKey) == 66)
+			{
+				if(memcmp(sPubKey, "02", 2) && memcmp(sPubKey, "03", 2))
+				{
+					fprintf(stderr, "pubkey must begin with 02 or 03 when len is 33 bytes!\n");
+					exit(2);
+				}
+				HexStr2Buf(sPubKey + 2, pubkey);
+			}
+			else
+			{
+				fprintf(stderr, "pubkey len must be 65 or 64 or 33 bytes!\n");
+				exit(2);
+			}
+			break;
+		case 's': //signature
+			sSignature = optarg;
+			if(strlen(sSignature) != 128)
+			{
+				fprintf(stderr, "signature len must be 64 bytes!\n");
+				exit(3);
+			}
+			// hexstr2buf(sSignature, signature, &itmp);
+			HexStr2Buf(sSignature, signature);
+			break;
+		case 'd': //data
+			sData = optarg;
+			if(strlen(sSignature) < 2)
+			{
+				fprintf(stderr, "data len must be more than 1 byte!\n");
+				exit(4);
+			}
+			else if (strlen(sData) > sizeof(data)*2)
+			{
+				fprintf(stderr, "data len too large, max %d bytes!\n", sizeof(data));
+				exit(5);
+			}
+			
+			// hexstr2buf(sData, data, &datalen);
+			if(HexStr2Buf(sData, data) < 0)
+			{
+				fprintf(stderr, "data format err!\n");
+				exit(5);
+			}
+			datalen = strlen(sData) / 2;
+			break;
+		default: /* '?' */
+ShowHelp:
+			fprintf(stderr, "Usage: %s -k pubkey -s signature -d data\n", argv[0]);
+			fprintf(stderr, "Example: %s -k 031B120EF62E65D55C4655B660EBE784069A440E89877A968F0BC22E43F445A0AA -s 76A00BD0A6B85ECDEE7AC7E3005061CF659050B0B0062CD4FB96E726371BEA6EF657064A9E586C19B45A9A193FDBB6F089BB766B85F4648E85E13DDBC24F7D60 -d 128000000112210000010404002102BF294C021507282DE822240E3A34A4350829955502194B28202DBAA5B6315099\n", argv[0]);
+			exit(1);
+		}
+	}
+
+	if(!sPubKey || !sSignature || !sData)
+	{
+		goto ShowHelp;
+	}
+	// ret = sm2_verify_sig(data, datalen, user_id, user_id_len, pubkey, (SM2_SIGNATURE_STRUCT*)signature);
+	char sFullPubKey[132] = {0};
+	strcat(sFullPubKey, "04");
+	if(strlen(sPubKey) >= 128)
+	{
+		Buf2HexStr(pubkey, 64, sFullPubKey + 2);
+	}
+	else
+	{
+		Buf2HexStr(pubkey, 32, sFullPubKey + 2);
+		ret = TCPS_SM2_GetY(sPubKey, sFullPubKey + 66, 66);
+		if(ret)
+		{
+			fprintf(stderr, "Calc PubKey Y failed!", argv[0]);
+			exit(7);
+		}
+		HexStr2Buf4(sFullPubKey + 66, 64, pubkey + 32, 32);
+	}
+
+	unsigned char SIGN[100];
+	unsigned int SIGN_len = 0;
+	SET_SIGN_DATA(signature, 64, SIGN, &SIGN_len);
+
+	//SM3
+	unsigned char SM3[32];
+	TCPS_SM3(pubkey, pubkey+32, data, datalen, SM3);
+// bytes2hex_string((unsigned char*)ss, SM3, 32);
+// printf("SM3[%d] = %s\n", strlen(ss), ss);
+
+printf("sFullPubKey[%d] = %s\n", strlen(sFullPubKey), sFullPubKey);
+	//Very Signature
+	ret = TCPS_SM2_verify2(sFullPubKey, SM3, 32, SIGN, SIGN_len);
+	if (ret)
+	{
+		printf("Verify SM2 signature failed!\n");
+		return 7;
+	}
+	printf("Verify SM2 signature success.\n");
+	return 0;
+}
+
+#else
+
 
 
 int main(int argc, char* argv[])
